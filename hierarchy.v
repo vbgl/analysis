@@ -1,7 +1,7 @@
 (* mathcomp analysis (c) 2017 Inria and AIST. License: CeCILL-C.              *)
 Require Import Reals.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat eqtype choice.
-From mathcomp Require Import seq fintype bigop ssralg ssrnum finmap.
+From mathcomp Require Import seq fintype bigop ssralg ssrnum finmap matrix.
 From SsrReals Require Import boolp reals.
 Require Import Rstruct Rbar set posnum.
 
@@ -103,6 +103,13 @@ Canonical default_filter_on_term Y (X : filteredType Y) (x : X) :=
 
 Definition filter_from {I T : Type} (D : set I) (B : I -> set T) : set (set T) :=
   [set P | exists2 i, D i & B i `<=` P].
+
+(* the canonical filter on vectors on X is the product of the canonical filter
+   on X *)
+Canonical rV_filtered n X (Z : filteredType X) : filteredType 'rV[X]_n :=
+  FilteredType 'rV[X]_n 'rV[Z]_n (fun vx => filter_from
+    [set P | forall i, locally (vx ord0 i) (P i)]
+    (fun P => [set vy : 'rV[X]_n | forall i, P i (vy ord0 i)])).
 
 Definition filter_prod {T U : Type}
   (F : set (set T)) (G : set (set U)) : set (set (T * U)) :=
@@ -1171,6 +1178,42 @@ by move=> [DAi|DBi];
 Qed.
 
 End TopologyOfSubbase.
+
+(** ** Topology on vectors *)
+
+Section rV_Topology.
+
+Variables (n : nat) (T : topologicalType).
+
+Implicit Types p : 'rV[T]_n.
+
+Lemma rV_loc_filter p : ProperFilter (locally p).
+Proof.
+apply: (filter_from_proper (filter_from_filter _ _)) => [|P Q p_P p_Q|P p_P].
+- by exists (fun i => setT) => ?; apply: filterT.
+- exists (fun i => P i `&` Q i) => [?|vx PQvx]; first exact: filterI.
+  by split=> i; have [] := PQvx i.
+- exists (\row_i get (P i)) => i; rewrite mxE; apply: getPex.
+  exact: filter_ex (p_P i).
+Qed.
+
+Lemma rV_loc_singleton p (A : set 'rV[T]_n) : locally p A -> A p.
+Proof. by move=> [P p_P]; apply=> i; apply: locally_singleton. Qed.
+
+Lemma rV_loc_loc p (A : set 'rV[T]_n) : locally p A -> locally p (locally^~ A).
+Proof.
+move=> [P p_P sPA]; exists (fun i => locally^~ (P i)).
+  by move=> ?; apply: locally_locally.
+by move=> ??; exists P.
+Qed.
+
+Definition rV_topologicalTypeMixin :=
+  topologyOfFilterMixin rV_loc_filter rV_loc_singleton rV_loc_loc.
+
+Canonical rV_topologicalType :=
+  TopologicalType 'rV[T]_n rV_topologicalTypeMixin.
+
+End rV_Topology.
 
 (** ** Topology on the product of two spaces *)
 

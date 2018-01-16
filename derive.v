@@ -173,29 +173,6 @@ From mathcomp Require Import fintype matrix.
    to see what are the mathematical structures needed *)
 Section jacobian_tentative.
 
-Canonical rV_pointedType n (T : pointedType) :=
-  PointedType 'rV[T]_n (\row_i point).
-Definition filter_rV n {T : Type} (F : set (set T)) : set (set 'rV[T]_n).
-Admitted.
-Canonical filtered_rV n' X (Z : filteredType X) : filteredType 'rV[X]_n'.+1 :=
-  FilteredType 'rV[X]_n'.+1 'rV[Z]_n'.+1
-    (fun x => @filter_rV n'.+1 X (locally (x ord0 ord0))).
-
-Section rV_Topology.
-Variables (n' : nat) (T : topologicalType).
-Let n := n'.+1.
-Implicit Types p : 'rV[T]_n.
-Let rV_loc p := @filter_rV n T (@locally T _ (p ord0 ord0)).
-Lemma rV_loc_filter p : ProperFilter (rV_loc p). Admitted.
-Lemma rV_loc_singleton p (A : set 'rV[T]_n) : rV_loc p A -> A p. Admitted.
-Lemma rV_loc_loc p (A : set 'rV[T]_n) : rV_loc p A -> rV_loc p (rV_loc^~ A).
-Admitted.
-Definition rV_topologicalTypeMixin :=
-  topologyOfFilterMixin rV_loc_filter rV_loc_singleton rV_loc_loc.
-Canonical rV_topologicalType :=
-  TopologicalType 'rV[T]_n rV_topologicalTypeMixin.
-End rV_Topology.
-
 Section rV_Uniform.
 Variables (n' : nat) (T : uniformType).
 Let n := n'.+1.
