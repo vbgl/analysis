@@ -2,6 +2,7 @@
 Require Import Reals.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat eqtype choice.
 From mathcomp Require Import seq fintype bigop ssralg ssrnum finmap matrix.
+From mathcomp Require Import zmodp.
 From SsrReals Require Import boolp reals.
 Require Import Rstruct Rbar set posnum.
 
@@ -1828,6 +1829,63 @@ Proof. exact: flim_close. Qed.
 End Locally.
 Hint Resolve locally_ball.
 
+Section rV_Uniform.
+
+Variables (n : nat) (T : uniformType).
+
+Implicit Types x y : 'rV[T]_n.
+
+Definition rV_ball x (e : R) y := forall i, ball (x ord0 i) e (y ord0 i).
+
+Lemma rV_ball_center x (e : R) : 0 < e -> rV_ball x e x.
+Proof. by move=> ??; apply: ballxx. Qed.
+
+Lemma rV_ball_sym x y (e : R) : rV_ball x e y -> rV_ball y e x.
+Proof. by move=> xe_y ?; apply/ball_sym/xe_y. Qed.
+
+Lemma rV_ball_triangle x y z (e1 e2 : R) :
+  rV_ball x e1 y -> rV_ball y e2 z -> rV_ball x (e1 + e2) z.
+Proof.
+by move=> xe1_y ye2_z ?; apply: ball_triangle; [apply: xe1_y| apply: ye2_z].
+Qed.
+
+Lemma ltr_bigminr (I : finType) (R : realDomainType) (f : I -> R) (x0 x : R) :
+  x < x0 -> (forall i, x < f i) -> x < \big[minr/x0]_i f i.
+Proof.
+move=> ltx0 ltxf; elim/big_ind: _ => // y z ltxy ltxz.
+by rewrite ltr_minr ltxy ltxz.
+Qed.
+
+Lemma bigminr_ler (I : finType) (R : realDomainType) (f : I -> R) (x0 : R) i :
+  \big[minr/x0]_j f j <= f i.
+Proof.
+have := mem_index_enum i; rewrite unlock; elim: (index_enum I) => //= j l ihl.
+by rewrite inE => /orP [/eqP->|/ihl leminlfi];
+  rewrite ler_minl ?lerr // leminlfi orbC.
+Qed.
+
+Lemma exists2P A (P Q : A -> Prop) :
+  (exists2 a, P a & Q a) <-> exists a, P a /\ Q a.
+Proof. by split=> [[a ??] | [a []]]; exists a. Qed.
+
+Lemma rV_locally : @locally _ _ = @locally_ 'rV[T]_n _ rV_ball.
+Proof.
+rewrite predeq2E => x A; split; last first.
+  by move=> [e egt0 xe_A]; exists (fun i => ball (x ord0 i) (PosNum egt0)%:num).
+move=> [P]; rewrite -locally_ballE => x_P sPA.
+exists (\big[minr/1]_i get (fun e : R => 0 < e /\ ball (x ord0 i) e `<=` P i)).
+  by apply: ltr_bigminr => // i; have /exists2P/getPex [] := x_P i.
+move=> y xmin_y; apply: sPA => i; have /exists2P/getPex [_] := x_P i; apply.
+by apply: ball_ler (xmin_y i); apply: bigminr_ler.
+Qed.
+
+Definition rV_uniformType_mixin :=
+  Uniform.Mixin rV_ball_center rV_ball_sym rV_ball_triangle rV_locally.
+
+Canonical rV_uniformType := UniformType 'rV[T]_n rV_uniformType_mixin.
+
+End rV_Uniform.
+
 Section prod_Uniform.
 
 Context {U V : uniformType}.
@@ -2461,10 +2519,6 @@ exists p; split=> [|B C FB p_C]; first by have /AclFIp [] := FA.
 by have /AclFIp [_] := FB; move=> /(_ _ p_C).
 Qed.
 
-Lemma exists2P A (P Q : A -> Prop) :
-  (exists2 x, P x & Q x) <-> exists x, P x /\ Q x.
-Proof. by split=> [[x ??] | [x []]]; exists x. Qed.
-
 Lemma compact_cover : compact = cover_compact.
 Proof.
 rewrite compact_In0 cover_compactE predeqE => A.
@@ -2626,6 +2680,28 @@ Proof. by case: T F FF => [? [?]]. Qed.
 
 End completeType1.
 Arguments complete_cauchy {T} F {FF} _.
+
+Section rV_Complete.
+
+Variables (T : completeType) (n : nat).
+
+Lemma rV_complete_cauchy (F : set (set 'rV[T]_n)) :
+  ProperFilter F -> cauchy F -> cvg F.
+Proof.
+move=> FF Fc.
+have /(_ _) /complete_cauchy cvF : cauchy ((fun v : 'rV[T]_n => v ord0 _) @ F).
+  by move=> i _ /posnumP[e]; rewrite near_simpl; apply: filterS (Fc _ _).
+apply/cvg_ex; exists (\row_i (lim ((fun v : 'rV[T]_n => v ord0 i) @ F) : T)).
+apply/flim_ballP => _ /posnumP[e]; begin_near v.
+  move=> i; rewrite mxE; have_near F w => /=.
+    by apply: (@ball_splitl _ (w ord0 i)); last move: (i); near w.
+  by end_near; [apply/cvF/locally_ball|near v].
+by end_near; apply: nearP_dep; apply: filterS (Fc _ _).
+Qed.
+
+Canonical rV_completeType := CompleteType 'rV[T]_n rV_complete_cauchy.
+
+End rV_Complete.
 
 Section fct_Complete.
 
@@ -3024,7 +3100,74 @@ End NormedModule2.
 Hint Resolve normm_ge0.
 Arguments flim_norm {_ _ F FF}.
 Arguments flim_bounded {_ _ F FF}.
-(** Rings with absolute values are normed modules *)
+
+(** ** Vectors *)
+
+Section Matrix_LMod.
+
+Variables (R : ringType) (V : lmodType R) (m n : nat).
+
+Definition mscale x (A : 'M[V]_(m, n)) := \matrix_(i, j) (x *: (A i j)).
+
+Program Definition matrix_LModMixin := @LmodMixin _ _ mscale _ _ _ _.
+Next Obligation. by apply/matrixP => ??; rewrite !mxE scalerA. Qed.
+Next Obligation. by move=> ?; apply/matrixP => ??; rewrite !mxE scale1r. Qed.
+Next Obligation. by move=> ???; apply/matrixP => ??; rewrite !mxE scalerDr. Qed.
+Next Obligation. by move=> ??; apply/matrixP => ??; rewrite !mxE scalerDl. Qed.
+
+End Matrix_LMod.
+
+Section rV_normedMod.
+
+Variables (K : absRingType) (V : normedModType K) (n : nat).
+
+(* take n.+1 because ball_normE is not provable for n = 0 *)
+Definition rV_norm (x : 'rV[V]_n.+1) :=
+  bigmaxr 0 [seq `|[x ord0 i]| | i : 'I_n.+1].
+
+Program Definition rV_NormedModMixin :=
+  @NormedModMixin _ (LmodType _ _ (matrix_LModMixin _ _ _))
+    (@locally _ [filteredType 'rV[V]_n.+1 of 'rV[V]_n.+1])
+    (Uniform.mixin (Uniform.class _)) rV_norm _ _ _ _.
+Next Obligation.
+apply/bigmaxr_lerP=> [|i]; rewrite size_map size_enum_ord // => ltim.
+rewrite (nth_map ord0); last by rewrite size_enum_ord.
+rewrite mxE; apply: ler_trans (ler_normm_add _ _) _.
+do 2 ?[rewrite -(nth_map _ 0 (fun i => `|[_ ord0 i]|)) ?size_enum_ord //].
+by apply: ler_add; apply: bigmaxr_ler; rewrite size_map size_enum_ord.
+Qed.
+Next Obligation.
+apply/bigmaxr_lerP => [|i]; rewrite size_map size_enum_ord // => ltim.
+rewrite (nth_map ord0); last by rewrite size_enum_ord.
+rewrite mxE; apply: ler_trans (ler_normmZ _ _) _; apply: ler_pmul => //.
+rewrite -(nth_map _ 0 (fun i => `|[x ord0 i]|)); last by rewrite size_enum_ord.
+by apply: bigmaxr_ler; rewrite size_map size_enum_ord.
+Qed.
+Next Obligation.
+rewrite predeq3E => x e y; split.
+  move=> xe_y; apply/bigmaxr_ltrP; rewrite size_map size_enum_ord // => i iltn.
+  rewrite (nth_map ord0); last by rewrite size_enum_ord.
+  rewrite -[i]/(nat_of_ord (Ordinal iltn)) nth_ord_enum !mxE.
+  by have := xe_y (Ordinal iltn); rewrite -ball_normE.
+move=> /bigmaxr_ltrP; rewrite size_map size_enum_ord => xe_y i.
+have := xe_y _ i; rewrite (nth_map ord0); last by rewrite size_enum_ord.
+by rewrite nth_ord_enum !mxE -ball_normE; apply.
+Qed.
+Next Obligation.
+apply/matrixP => i j; rewrite ord1 mxE; apply/eqP.
+rewrite -normm_le0 -H -[j](nth_ord_enum ord0).
+rewrite -(nth_map _ 0 (fun i => `|[x 0 i]|)) ?size_enum_ord //.
+by apply: bigmaxr_ler; rewrite size_map size_enum_ord.
+Qed.
+
+Canonical rV_NormedType :=
+  NormedModule.Pack (Phant _) (@NormedModule.Class _ _
+    (GRing.Lmodule.Class (matrix_LModMixin _ _ _))
+    (Pointed.mixin (Pointed.class [pointedType of 'rV[V]_n.+1])) _
+    (Topological.mixin (Topological.class [topologicalType of _])) _
+    rV_NormedModMixin) 'rV[V]_n.+1.
+
+End rV_normedMod.
 
 (** ** Pairs *)
 
@@ -3233,6 +3376,7 @@ Definition pointedType := @Pointed.Pack cT xclass xT.
 Definition filteredType := @Filtered.Pack cT cT xclass xT.
 Definition topologicalType := @Topological.Pack cT xclass xT.
 Definition uniformType := @Uniform.Pack cT xclass xT.
+Definition completeType := @Complete.Pack cT xclass xT.
 Definition join_zmodType := @GRing.Zmodule.Pack uniformType xclass xT.
 Definition join_lmodType := @GRing.Lmodule.Pack K phK uniformType xclass xT.
 Definition normedModType := @NormedModule.Pack K phK cT xclass xT.
@@ -3262,6 +3406,8 @@ Coercion uniformType : type >-> Uniform.type.
 Canonical uniformType.
 Canonical join_zmodType.
 Canonical join_lmodType.
+Coercion completeType : type >-> Complete.type.
+Canonical completeType.
 Coercion normedModType : type >-> NormedModule.type.
 Canonical normedModType.
 Canonical join_uniformType.
@@ -3298,6 +3444,9 @@ exact: flimi_unique _ f_l' f_l.
 Qed.
 
 End CompleteNormedModule1.
+
+Canonical rV_completeNormedModType (K : absRingType) (V : completeNormedModType K)
+  (n : nat) := [completeNormedModType K of 'rV[V]_n.+1].
 
 (** * Extended Types *)
 

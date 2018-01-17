@@ -173,41 +173,7 @@ From mathcomp Require Import fintype matrix.
    to see what are the mathematical structures needed *)
 Section jacobian_tentative.
 
-Section rV_Uniform.
-Variables (n' : nat) (T : uniformType).
-Let n := n'.+1.
-Implicit Types x y : 'rV[T]_n.
-Definition rV_ball x (e : R) y : Prop. Admitted.
-Lemma rV_ball_center x (e : R) : 0 < e -> rV_ball x e x. Admitted.
-Lemma rV_ball_sym x y (e : R) : rV_ball x e y -> rV_ball y e x. Admitted.
-Lemma rV_ball_triangle x y z (e1 e2 : R) :
-  rV_ball x e1 y -> rV_ball y e2 z -> rV_ball x (e1 + e2) z. Admitted.
-Lemma rV_locally : @locally _ _ = @locally_ 'rV[T]_n _ rV_ball. Admitted.
-Definition rV_uniformType_mixin :=
-  Uniform.Mixin rV_ball_center rV_ball_sym rV_ball_triangle rV_locally.
-Canonical rV_uniformType := UniformType 'rV[T]_n rV_uniformType_mixin.
-End rV_Uniform.
-
-Section rV_normedMod.
-Variables (n' : nat).
-Let n := n'.+1.
-Let T := [normedModType R of R^o].
-Implicit Types x y : 'rV[T]_n.
-Definition rV_norm x : R. Admitted. (* maximum norm *)
-Lemma rV_ax1 : forall x y, rV_norm (x + y) <= rV_norm x + rV_norm y. Admitted.
-Lemma rV_ax2 : forall (l : R) x, rV_norm (l *: x) <= abs l * rV_norm x.
-Admitted.
-Lemma rV_ax3 : ball = ball_ rV_norm. Admitted.
-Lemma rV_ax4 : forall x : 'rV[T]_n, rV_norm x = 0 -> x = 0. Admitted.
-End rV_normedMod.
-
-Definition rV_NormedModMixin n' :=
-  @NormedModMixin [absRingType of R] _ _ _ (@rV_norm n') (@rV_ax1 n')
-    (@rV_ax2 n') (@rV_ax3 n') (@rV_ax4 n').
-
-Canonical rV_NormedType n' := NormedModType R _ (@rV_NormedModMixin n').
-
-Notation "''RV_' n" := (rV_NormedType n.-1)
+Notation "''RV_' n" := (rV_NormedType [normedModType R of R^o] n.-1)
   (at level 8, n at level 2, format "''RV_' n").
 
 Definition jacobian n m (f : 'RV_n -> 'RV_m) p := lin1_mx ('d_p f).
