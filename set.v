@@ -331,8 +331,8 @@ Canonical Prop_pointedType := PointedType Prop False.
 Canonical nat_pointedType := PointedType nat 0%N.
 Canonical prod_pointedType (T T' : pointedType) :=
   PointedType (T * T') (point, point).
-Canonical rV_pointedType n (T : pointedType) :=
-  PointedType 'rV[T]_n (\row_i point)%R.
+Canonical matrix_pointedType m n (T : pointedType) :=
+  PointedType 'M[T]_(m, n) (\matrix_(_, _) point)%R.
 
 Notation get := (xget point).
 
