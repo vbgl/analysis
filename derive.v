@@ -173,7 +173,7 @@ From mathcomp Require Import fintype matrix.
    to see what are the mathematical structures needed *)
 Section jacobian_tentative.
 
-Notation "''RV_' n" := (matrix_normedModType [normedModType R of R^o] 0 n.-1)
+Notation "''RV_' n" := (matrix_lmod_normedModType [normedModType R of R^o] 0 n.-1)
   (at level 8, n at level 2, format "''RV_' n").
 
 Definition jacobian n m (f : 'RV_n -> 'RV_m) p := lin1_mx ('d_p f).

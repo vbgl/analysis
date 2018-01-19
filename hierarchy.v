@@ -3122,6 +3122,11 @@ Next Obligation. by move=> ?; apply/matrixP => ??; rewrite !mxE scale1r. Qed.
 Next Obligation. by move=> ???; apply/matrixP => ??; rewrite !mxE scalerDr. Qed.
 Next Obligation. by move=> ??; apply/matrixP => ??; rewrite !mxE scalerDl. Qed.
 
+Definition lmod_lmod T := @id T.
+
+Canonical matrix_lmod_lmodType :=
+  LmodType R (lmod_lmod 'M[V]_(m, n)) matrix_LModMixin.
+
 End Matrix_LMod.
 
 Section matrix_normedMod.
@@ -3133,8 +3138,8 @@ Definition mx_norm (x : 'M[V]_(m.+1, n.+1)) :=
   bigmaxr 0 [seq `|[x ij.1 ij.2]| | ij : 'I_m.+1 * 'I_n.+1].
 
 Program Definition matrix_NormedModMixin :=
-  @NormedModMixin _ (LmodType _ _ (matrix_LModMixin _ _ _))
-    (@locally _ [filteredType 'M[V]_(m.+1, n.+1) of 'M[V]_(m.+1, n.+1)])
+  @NormedModMixin _ (* (LmodType _ _ (matrix_LModMixin _ _ _)) *)_
+    (@locally _ [filteredType 'M[V]_(m.+1, n.+1) of lmod_lmod 'M[V]_(m.+1, n.+1)])
     (Uniform.mixin (Uniform.class _)) mx_norm _ _ _ _.
 Next Obligation.
 apply/bigmaxr_lerP=> [|i]; rewrite size_map -cardT mxvec_cast // => ltimn.
@@ -3179,12 +3184,16 @@ rewrite (nth_map (ord0, ord0)); last by rewrite index_mem mem_enum.
 by rewrite nth_index // mem_enum.
 Qed.
 
-Canonical matrix_normedModType :=
-  @NormedModule.pack _ (Phant K) 'M[V]_(m.+1, n.+1) _ _ _
-  matrix_NormedModMixin (LmodType _ _ (matrix_LModMixin _ _ _))
-  (GRing.Lmodule.Class (matrix_LModMixin _ _ _)) id _ _ id _ id.
+Canonical matrix_lmod_normedModType :=
+  NormedModType K (lmod_lmod 'M[V]_(m.+1, n.+1)) matrix_NormedModMixin.
+
+  (* @NormedModule.pack _ (Phant K) 'M[V]_(m.+1, n.+1) _ _ _ *)
+  (* matrix_NormedModMixin (LmodType _ _ (matrix_LModMixin _ _ _)) *)
+  (* (GRing.Lmodule.Class (matrix_LModMixin _ _ _)) id _ _ id _ id. *)
 
 End matrix_normedMod.
+
+Canonical lmod_eqType (E : eqType) := EqType (lmod_lmod E) [eqMixin of E].
 
 (** ** Pairs *)
 
@@ -3281,6 +3290,9 @@ Definition AbsRing_NormedModMixin := @NormedModule.Mixin K _ _ _
 Canonical AbsRing_NormedModType := NormedModType K K^o AbsRing_NormedModMixin.
 
 End AbsRing_NormedModule.
+
+(* Canonical matrix_normedModType (K : absRingType) m n := *)
+(*   NormedModType K 'M[K]_(m.+1, n.+1) (matrix_NormedModMixin [normedModType K of K^o] m n). *)
 
 (* Quick fix for non inferred instances *)
 (* This does not fix everything, see below *)
@@ -3464,7 +3476,7 @@ End CompleteNormedModule1.
 
 Canonical matrix_completeNormedModType (K : absRingType)
   (V : completeNormedModType K) (m n : nat) :=
-  [completeNormedModType K of 'M[V]_(m.+1, n.+1)].
+  [completeNormedModType K of lmod_lmod 'M[V]_(m.+1, n.+1)].
 
 (** * Extended Types *)
 
