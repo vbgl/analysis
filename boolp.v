@@ -4,6 +4,26 @@
 (* Copyright (c) - 2016--2018 - Polytechnique                           *)
 
 (* -------------------------------------------------------------------- *)
+
+
+
+(* Quoting Coq'standard library:
+"This file provides classical logic and indefinite description under
+the form of Hilbert's epsilon operator":
+Axiom constructive_indefinite_description :
+  forall (A : Type) (P : A->Prop),
+    (exists x, P x) -> { x : A | P x }
+In fact it also derives the consequences of this axiom, which include
+informative excluded middle, choice, etc.                               *)
+Require Import ClassicalEpsilon.
+
+(* We also want functional extensionality *)
+Require Import FunctionalExtensionality.
+
+(* We also want propositional extensionality *)
+Require Import PropExtensionality PropExtensionalityFacts.
+
+
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype choice.
 
 (* -------------------------------------------------------------------- *)
@@ -11,16 +31,8 @@ Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Axiom functional_extensionality_dep :
-       forall (A : Type) (B : A -> Type) (f g : forall x : A, B x),
-       (forall x : A, f x = g x) -> f = g.
-Axiom propositional_extensionality :
-       forall P Q : Prop, P <-> Q -> P = Q.
 
-Axiom constructive_indefinite_description :
-  forall (A : Type) (P : A -> Prop),
-  (exists x : A, P x) -> {x : A | P x}.
-Notation cid := constructive_indefinite_description.
+Notation cid := (@constructive_indefinite_description _ _).
 
 (* -------------------------------------------------------------------- *)
 Record mextentionality := {
@@ -97,7 +109,7 @@ Proof. by move=> /(_ _)/constructive_indefinite_description -/all_tag. Qed.
 Theorem EM P : P \/ ~ P.
 Proof.
 pose U val := fun Q : bool => Q = val \/ P.
-have Uex val : exists b, U val b by exists val; left.
+have Uex val : exists b, U val b by exists val; left. 
 pose f val := projT1 (cid (Uex val)).
 pose Uf val : U val (f val) := projT2 (cid (Uex val)).
 have : f true != f false \/ P.
