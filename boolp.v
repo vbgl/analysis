@@ -35,28 +35,19 @@ Unset Printing Implicit Defensive.
 Notation cid := (@constructive_indefinite_description _ _).
 
 (* -------------------------------------------------------------------- *)
-Record mextentionality := {
-  _ : forall (P Q : Prop), (P <-> Q) -> (P = Q);
-  _ : forall {T U : Type} (f g : T -> U),
-        (forall x, f x = g x) -> f = g;
-}.
-
-Fact extentionality : mextentionality.
-Proof.
-split.
-- exact: propositional_extensionality.
-- by move=> T U f g; apply: functional_extensionality_dep.
-Qed.
-
-Lemma propext (P Q : Prop) : (P <-> Q) -> (P = Q).
-Proof. by have [propext _] := extentionality; apply: propext. Qed.
+(* Functional extensionality *)
 
 Lemma funext {T U : Type} (f g : T -> U) : (f =1 g) -> f = g.
-Proof. by case: extentionality=> _; apply. Qed.
+Proof. exact: functional_extensionality. Qed.
+
+(* -------------------------------------------------------------------- *)
+(* Propositional extensionality *)
 
 Lemma propeqE (P Q : Prop) : (P = Q) = (P <-> Q).
-Proof. by apply: propext; split=> [->|/propext]. Qed.
-
+Proof.
+apply: propositional_extensionality; split => [-> // |].
+exact: propositional_extensionality.
+Qed.
 
 Lemma funeqE {T U : Type} (f g : T -> U) : (f = g) = (f =1 g).
 Proof. by rewrite propeqE; split=> [->//|/funext]. Qed.
@@ -89,21 +80,47 @@ Proof.
 by rewrite propeqE; split=> [->//|?]; rewrite funeq3E=> ???; rewrite propeqE.
 Qed.
 
+
+Lemma trueE : true = True :> Prop.
+Proof. by rewrite propeqE; split. Qed.
+
+Lemma falseE : false = False :> Prop.
+Proof. by rewrite propeqE; split. Qed.
+
 Lemma propT (P : Prop) : P -> P = True.
 Proof. by move=> p; rewrite propeqE; tauto. Qed.
+
+Lemma propF (P : Prop) : ~ P -> P = False.
+Proof. by move=> p; rewrite propeqE; tauto. Qed.
+
+Lemma eq_forall T (U V : T -> Prop) :
+  (forall x : T, U x = V x) -> (forall x, U x) = (forall x, V x).
+Proof. by move=> e; rewrite propeqE; split=> ??; rewrite (e,=^~e). Qed.
+
+Lemma eq_exists T (U V : T -> Prop) :
+  (forall x : T, U x = V x) -> (exists x, U x) = (exists x, V x).
+Proof.
+by move=> e; rewrite propeqE; split=> - [] x ?; exists x; rewrite (e,=^~e).
+Qed.
+
+Lemma reflect_eq (P : Prop) (b : bool) : reflect P b -> P = b.
+Proof. by rewrite propeqE; exact: rwP. Qed.
+
+Lemma notb (b : bool) : (~ b) = ~~ b.
+Proof. apply: reflect_eq; exact: negP. Qed.
 
 Lemma Prop_irrelevance (P : Prop) (x y : P) : x = y.
 Proof. by move: x (x) y => /propT-> [] []. Qed.
 
+Lemma exist_congr T (U : T -> Prop) (s t : T) (p : U s) (q : U t) :
+  s = t -> exist U s p = exist U t q.
+Proof. by move=> st; case: _ / st in q *; apply/congr1/Prop_irrelevance. Qed.
+
 (* -------------------------------------------------------------------- *)
-Record mclassic := {
-  _ : forall (P : Prop), {P} + {~P};
-  _ : forall T, Choice.mixin_of T
-}.
 
 Lemma choice X Y (P : X -> Y -> Prop) :
   (forall x, exists y, P x y) -> {f & forall x, P x (f x)}.
-Proof. by move=> /(_ _)/constructive_indefinite_description -/all_tag. Qed.
+Proof. move=> /(_ _)/constructive_indefinite_description; exact: all_tag. Qed.
 
 (* Diaconescu Theorem *)
 Theorem EM P : P \/ ~ P.
@@ -128,49 +145,22 @@ have : exists b, if b then P else ~ P.
 by move=> /cid [[]]; [left|right].
 Qed.
 
-Lemma classic : mclassic.
-Proof.
-split=> [|T]; first exact: pselect.
-exists (fun (P : pred T) (n : nat) =>
-  if pselect (exists x, P x) isn't left ex then None
-  else Some (projT1 (cid ex)))
-  => [P n x|P [x Px]|P Q /funext -> //].
-  by case: pselect => // ex [<- ]; case: cid.
-by exists 0; case: pselect => // -[]; exists x.
-Qed.
 
 Lemma gen_choiceMixin {T : Type} : Choice.mixin_of T.
-Proof. by case: classic. Qed.
-
+Proof.
+pose eps (P : pred T) (n : nat) :=
+  if pselect (exists x, P x) isn't left ex then None
+  else Some (projT1 (cid ex)).
+exists eps => [P n x|P [x Px]|P Q /funext -> //].
+  by rewrite /eps; case: pselect => // ex [<- ]; case: cid.
+by exists 0; rewrite / eps; case: pselect => // -[]; exists x.
+Qed.
 
 Lemma pdegen (P : Prop): P = True \/ P = False.
 Proof. by have [p|Np] := pselect P; [left|right]; rewrite propeqE. Qed.
 
-Lemma lem (P : Prop): P \/ ~P.
-Proof. by case: (pselect P); tauto. Qed.
 
 (* -------------------------------------------------------------------- *)
-Lemma trueE : true = True :> Prop.
-Proof. by rewrite propeqE; split. Qed.
-
-Lemma falseE : false = False :> Prop.
-Proof. by rewrite propeqE; split. Qed.
-
-Lemma propF (P : Prop) : ~ P -> P = False.
-Proof. by move=> p; rewrite propeqE; tauto. Qed.
-
-Lemma eq_forall T (U V : T -> Prop) :
-  (forall x : T, U x = V x) -> (forall x, U x) = (forall x, V x).
-Proof. by move=> e; rewrite propeqE; split=> ??; rewrite (e,=^~e). Qed.
-
-Lemma eq_exists T (U V : T -> Prop) :
-  (forall x : T, U x = V x) -> (exists x, U x) = (exists x, V x).
-Proof.
-by move=> e; rewrite propeqE; split=> - [] x ?; exists x; rewrite (e,=^~e).
-Qed.
-
-Lemma reflect_eq (P : Prop) (b : bool) : reflect P b -> P = b.
-Proof. by rewrite propeqE; exact: rwP. Qed.
 
 Definition asbool (P : Prop) :=
   if pselect P then true else false.
