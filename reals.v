@@ -38,14 +38,14 @@ Definition nonempty (E : pred R) :=
 
 (* Real upper bound and lower bound sets. *)
 Definition ub (E : pred R) : pred R :=
-  [pred z | `[forall y, (y \in E) ==> (y <= z)]].
+  [pred z | `[< forall y, (y \in E) ==> (y <= z) >]].
 Definition lb (E : pred R) : pred R :=
-  [pred z | `[forall y, (y \in E) ==> (z <= y)]].
+  [pred z | `[< forall y, (y \in E) ==> (z <= y) >]].
 
 (* Real down set (i.e., generated order ideal) *)
 (* i.e. down E := { x | exists y, y \in E /\ x <= y} *)
 Definition down (E : pred R) : pred R :=
-  [pred x | `[exists y, (y \in E) && (x <= y)]].
+  [pred x | `[< exists y, (y \in E) && (x <= y) >]].
 
 (* Real set supremum and infimum existence condition. *)
 Definition has_ub  (E : pred R) := nonempty (ub E).
@@ -202,7 +202,12 @@ Lemma nonemptyP E : nonempty E <-> exists x, x \in E.
 Proof. by []. Qed.
 
 Lemma ubP E x : reflect (forall y, y \in E -> y <= x) (x \in ub E).
-Proof. by apply: (iffP (forallbP _))=> h y; apply/implyP/h. Qed.
+Proof.  apply: (iffP idP); rewrite inE asboolE /=.
+Set Printing All.
+  apply: (iffP (forall_asboolP _))=> h y.
+have:= (h y). rewrite asbool_imply. apply/imply_asboolP.
+       apply/implyP. apply/implyP: (h y).
+       apply/implyP/h. Qed.
 
 Lemma lbP E x : reflect (forall y, y \in E -> x <= y) (x \in lb E).
 Proof. by apply: (iffP (forallbP _))=> h y; apply/implyP/h. Qed.
