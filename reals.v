@@ -9,9 +9,9 @@
 (* -------------------------------------------------------------------- *)
 
 From mathcomp Require Import all_ssreflect all_algebra.
-(* ------- *) Require Import boolp.
+(* ------- *) Require Import boolp classical_preds classical_sets.
 
-Require Import Setoid.
+(* Require Import Setoid. *)
 
 (* -------------------------------------------------------------------- *)
 Set   Implicit Arguments.
@@ -26,32 +26,33 @@ Delimit Scope real_scope with real.
 
 Local Open Scope real_scope.
 Local Open Scope ring_scope.
-
+Local Open Scope classical_set_scope.
+Local Open Scope prop_scope.
 (* -------------------------------------------------------------------- *)
 Section ArchiBound.
 
 Variable (R : archiFieldType).
 
-(* Real set non-emptyness. *)
-Definition nonempty (E : pred R) :=
+  (* Real set non-emptyness. *)
+Definition nonempty (E : set (Num.ArchimedeanField.sort R)) :=
   exists x : R, x \in E.
 
 (* Real upper bound and lower bound sets. *)
-Definition ub (E : pred R) : pred R :=
-  [pred z | `[< forall y, (y \in E) ==> (y <= z) >]].
-Definition lb (E : pred R) : pred R :=
-  [pred z | `[< forall y, (y \in E) ==> (z <= y) >]].
+Definition ub (E : set R) : set R :=
+  [set z | forall y, (y \in E) -> (y <= z)].
+Definition lb (E : set R) : set R :=
+  [set z | forall y, (y \in E) -> (z <= y)].
 
 (* Real down set (i.e., generated order ideal) *)
 (* i.e. down E := { x | exists y, y \in E /\ x <= y} *)
-Definition down (E : pred R) : pred R :=
-  [pred x | `[< exists y, (y \in E) && (x <= y) >]].
+Definition down (E : set R) : set R :=
+  [set x | exists2 y, (y \in E) & (x <= y)].
 
 (* Real set supremum and infimum existence condition. *)
-Definition has_ub  (E : pred R) := nonempty (ub E).
-Definition has_sup (E : pred R) := nonempty E /\ has_ub E.
-Definition has_lb  (E : pred R) := nonempty (lb E).
-Definition has_inf (E : pred R) := nonempty E /\ has_lb E.
+Definition has_ub  (E : set R) := nonempty (ub E).
+Definition has_sup (E : set R) := nonempty E /\ has_ub E.
+Definition has_lb  (E : set R) := nonempty (lb E).
+Definition has_inf (E : set R) := nonempty E /\ has_lb E.
 
 End ArchiBound.
 
@@ -62,15 +63,15 @@ Section Mixin.
 Variable (R : archiFieldType).
 
 Record mixin_of : Type := Mixin {
-  sup : pred R -> R;
+  sup : set (Num.ArchimedeanField.sort R) -> Num.ArchimedeanField.sort R;
    _  :
-    forall E : pred (Num.ArchimedeanField.sort R),
+    forall E : set (Num.ArchimedeanField.sort R),
       has_sup E -> sup E \in ub E;
    _  :
-    forall (E : pred (Num.ArchimedeanField.sort R)) (eps : R),
+    forall (E : set (Num.ArchimedeanField.sort R)) (eps : R),
       has_sup E -> 0 < eps -> exists2 e : R, E e & (sup E - eps) < e;
    _  :
-    forall E : pred (Num.ArchimedeanField.sort R),
+    forall E : set (Num.ArchimedeanField.sort R),
       ~ has_sup E -> sup E = 0
 }.
 
@@ -186,65 +187,59 @@ End Real.
 Export Real.Exports.
 
 (* -------------------------------------------------------------------- *)
+Local Open Scope classical_set_scope.
+(* todo: the same notation as in finset might be dangerous... *)
+
 Definition sup {R : realType} := Real.sup (Real.class R).
-Local Notation "-` E" := [pred x | - x \in E]
-  (at level 35, right associativity) : fun_scope.
-Definition inf {R : realType} (E : pred R) := - sup (-` E).
+Local Notation "-` E" := [set x | E (- x)]
+                           (at level 35, right associativity) : fun_scope.
+
+Definition inf {R : realType} (E : set (Num.ArchimedeanField.sort R)) :=
+    - sup (-` E).
 
 (* -------------------------------------------------------------------- *)
-Section BaseReflect.
+Section DefinitionUnfolding.
 Context {R : archiFieldType}.
 
-Implicit Types E : pred R.
+Implicit Types E : set (Num.ArchimedeanField.sort R).
 Implicit Types x : R.
 
-Lemma nonemptyP E : nonempty E <-> exists x, x \in E.
+Lemma ubE E x : x \in ub E = forall y, y \in E -> y <= x.
+Proof. by [].  Qed. 
+
+Lemma lbE E x : x \in lb E = forall y, y \in E -> x <= y.
 Proof. by []. Qed.
 
-Lemma ubP E x : reflect (forall y, y \in E -> y <= x) (x \in ub E).
-Proof.  apply: (iffP idP); rewrite inE asboolE /=.
-Set Printing All.
-  apply: (iffP (forall_asboolP _))=> h y.
-have:= (h y). rewrite asbool_imply. apply/imply_asboolP.
-       apply/implyP. apply/implyP: (h y).
-       apply/implyP/h. Qed.
-
-Lemma lbP E x : reflect (forall y, y \in E -> x <= y) (x \in lb E).
-Proof. by apply: (iffP (forallbP _))=> h y; apply/implyP/h. Qed.
-
-Lemma downP E x : reflect (exists2 y, y \in E & x <= y) (x \in down E).
-Proof.
-apply: (iffP (existsbP _))=> [[y /andP[]]|[y]].
-  by exists y. by exists y; apply/andP; split.
-Qed.
-
-Lemma has_ubP {E} : has_ub E <-> nonempty (ub E).
+Lemma downE E x : x \in down E = exists2 y, y \in E & x <= y.
 Proof. by []. Qed.
 
-Lemma has_lbP {E} : has_lb E <-> nonempty (lb E).
+Lemma has_ubP {E} : has_ub E = nonempty (ub E).
 Proof. by []. Qed.
 
-Lemma has_supP {E} : has_sup E <-> (nonempty E /\ nonempty (ub E)).
+Lemma has_lbP {E} : has_lb E = nonempty (lb E).
 Proof. by []. Qed.
 
-Lemma has_infP {E} : has_inf E <-> (nonempty E /\ nonempty (lb E)).
+Lemma has_supP {E} : has_sup E = (nonempty E /\ nonempty (ub E)).
 Proof. by []. Qed.
 
-End BaseReflect.
+Lemma has_infP {E} : has_inf E = (nonempty E /\ nonempty (lb E)).
+Proof. by []. Qed.
+
+End DefinitionUnfolding.
 
 (* -------------------------------------------------------------------- *)
-Lemma sup_upper_bound {R : realType} (E : pred R):
+Lemma sup_upper_bound {R : realType} (E : set (Num.ArchimedeanField.sort R)):
   has_sup E -> (forall x, x \in E -> x <= sup E).
-Proof. by move=> supE; apply/ubP; case: R E supE=> ? [? ? []]. Qed.
+Proof. by case: R E => /= R /= [] ? ? [].  Qed.
 
-Lemma sup_adherent {R : realType} (E : pred R) (eps : R) :
+Lemma sup_adherent {R : realType} (E : set R) (eps : R) :
   has_sup E -> 0 < eps -> exists2 e : R, e \in E & (sup E - eps) < e.
 Proof. by case: R E eps=> ? [? ? []]. Qed.
 
-Lemma sup_out {R : realType} (E : pred R) : ~ has_sup E -> sup E = 0.
+Lemma sup_out {R : realType} (E : set R) : ~ has_sup E -> sup E = 0.
 Proof. by case: R E => ? [? ? []]. Qed.
 
-(* -------------------------------------------------------------------- *)
+
 Section IsInt.
 Context {R : realType}.
 

@@ -6,6 +6,7 @@ reals.v
 posnum.v
 landau.v
 classical_sets.v
+classical_preds.v
 Rstruct.v
 Rbar.v
 topology.v
