@@ -136,149 +136,154 @@ Notation "`[< P >]" := (asbool P) : bool_scope.
 Lemma asboolE (P : Prop) : `[< P >] = P :> Prop.
 Proof. by rewrite propeqE /asbool; case: pselect; split. Qed.
 
+(* todo: this is rwP of the other *)
 Lemma asboolP (P : Prop) : reflect P `[< P >].
 Proof. by apply: (equivP idP); rewrite asboolE. Qed.
 
-Lemma asboolPn (P : Prop) : reflect (~ P) (~~ `[< P >]).
-Proof. by rewrite /asbool; case: pselect=> h; constructor. Qed.
+(* Lemma asboolPn (P : Prop) : reflect (~ P) (~~ `[< P >]). *)
+(* Proof. by rewrite /asbool; case: pselect=> h; constructor. Qed. *)
 
-Lemma asboolW (P : Prop) : `[< P >] -> P.
-Proof. by case: asboolP. Qed.
+(* Lemma asboolW (P : Prop) : `[< P >] -> P. *)
+(* Proof. by case: asboolP. Qed. *)
 
-Lemma asboolT (P : Prop) : P -> `[< P >].
-Proof. by case: asboolP. Qed.
+(* Lemma asboolT (P : Prop) : P -> `[< P >]. *)
+(* Proof. by case: asboolP. Qed. *)
 
-Lemma asboolF (P : Prop) : ~ P -> `[< P >] = false.
-Proof. by apply/introF/asboolP. Qed.
+(* Lemma asboolF (P : Prop) : ~ P -> `[< P >] = false. *)
+(* Proof. by apply/introF/asboolP. Qed. *)
 
-Lemma is_true_inj : injective is_true.
-Proof. by move=> [] []; rewrite ?(trueE, falseE) ?propeqE; tauto. Qed.
+(* Lemma is_true_inj : injective is_true. *)
+(* Proof. by move=> [] []; rewrite ?(trueE, falseE) ?propeqE; tauto. Qed. *)
 
-Lemma asbool_equiv_eq {P Q : Prop} : (P <-> Q) -> `[< P >] = `[< Q >].
-Proof. by rewrite -propeqE => ->. Qed.
+(* Lemma asbool_equiv_eq {P Q : Prop} : (P <-> Q) -> `[< P >] = `[< Q >]. *)
+(* Proof. by rewrite -propeqE => ->. Qed. *)
 
-Lemma asbool_eq_equiv {P Q : Prop} : `[< P >] = `[< Q >] -> (P <-> Q).
-Proof.
-by move=> eq; split=> /asboolP; rewrite (eq, =^~ eq) => /asboolP.
-Qed.
+(* Lemma asbool_eq_equiv {P Q : Prop} : `[< P >] = `[< Q >] -> (P <-> Q). *)
+(* Proof. *)
+(* by move=> eq; split=> /asboolP; rewrite (eq, =^~ eq) => /asboolP. *)
+(* Qed. *)
 
 (* -------------------------------------------------------------------- *)
 (* Reflection (and boolean equality) lemmas *)
 
-Lemma and_asboolP (P Q : Prop) : reflect (P /\ Q) (`[< P >] && `[< Q >]).
-Proof.
-apply: (iffP idP); first by case/andP=> /asboolP hP /asboolP hQ.
-by case=> /asboolP-> /asboolP->.
-Qed.
+(* Lemma and_asboolP (P Q : Prop) : reflect (P /\ Q) (`[< P >] && `[< Q >]). *)
+(* Proof. *)
+(* apply: (iffP idP); first by case/andP=> /asboolP hP /asboolP hQ. *)
+(* by case=> /asboolP-> /asboolP->. *)
+(* Qed. *)
 
-Lemma or_asboolP (P Q : Prop) : reflect (P \/ Q) (`[< P >] || `[< Q >]).
-Proof.
-apply: (iffP idP); first by case/orP=> /asboolP; [left | right].
-by case=> /asboolP-> //=; rewrite orbT.
-Qed.
+(* Lemma or_asboolP (P Q : Prop) : reflect (P \/ Q) (`[< P >] || `[< Q >]). *)
+(* Proof. *)
+(* apply: (iffP idP); first by case/orP=> /asboolP; [left | right]. *)
+(* by case=> /asboolP-> //=; rewrite orbT. *)
+(* Qed. *)
 
-Lemma asbool_neg {P : Prop} : `[< ~ P >] = ~~ `[< P >].
-Proof. by apply/idP/asboolPn=> [/asboolP|/asboolT]. Qed.
+(* Lemma asbool_neg {P : Prop} : `[< ~ P >] = ~~ `[< P >]. *)
+(* Proof. by apply/idP/asboolPn=> [/asboolP|/asboolT]. Qed. *)
 
-Lemma asbool_or {P Q : Prop} : `[< P \/ Q >] = `[< P >] || `[< Q >].
-Proof.
-apply/idP/idP; first by move=> /asboolW/or_asboolP.
-move/or_asboolP; exact: asboolT.
-Qed.
+(* Lemma asbool_or {P Q : Prop} : `[< P \/ Q >] = `[< P >] || `[< Q >]. *)
+(* Proof. *)
+(* apply/idP/idP; first by move=> /asboolW/or_asboolP. *)
+(* move/or_asboolP; exact: asboolT. *)
+(* Qed. *)
 
-Lemma asbool_and {P Q : Prop} : `[< P /\ Q >] = `[< P >] && `[< Q >].
-Proof.
-apply/idP/idP; first by move=> /asboolW/and_asboolP.
-move/and_asboolP; exact: asboolT.
-Qed.
-
-
-Lemma imply_asboolP {P Q : Prop} : reflect (P -> Q) (`[< P >] ==> `[< Q >]).
-Proof.
-apply: (iffP implyP)=> [PQb /asboolP/PQb/asboolW //|].
-by move=> PQ /asboolP/PQ/asboolT.
-Qed.
-
-Lemma asbool_imply {P Q : Prop} : `[< P -> Q >] = `[< P >] ==> `[< Q >].
-Proof.
-apply/idP/idP; first by move/asboolW=> /imply_asboolP.
-move/imply_asboolP; exact: asboolT.
-Qed.
+(* Lemma asbool_and {P Q : Prop} : `[< P /\ Q >] = `[< P >] && `[< Q >]. *)
+(* Proof. *)
+(* apply/idP/idP; first by move=> /asboolW/and_asboolP. *)
+(* move/and_asboolP; exact: asboolT. *)
+(* Qed. *)
 
 
-Lemma imply_asboolPn (P Q : Prop) : reflect (P /\ ~ Q) (~~ `[< P -> Q >]).
-Proof.
-by rewrite asbool_imply negb_imply -asbool_neg; apply: (iffP idP) => /and_asboolP.
-Qed.
+(* Lemma imply_asboolP {P Q : Prop} : reflect (P -> Q) (`[< P >] ==> `[< Q >]). *)
+(* Proof. *)
+(* apply: (iffP implyP)=> [PQb /asboolP/PQb/asboolW //|]. *)
+(* by move=> PQ /asboolP/PQ/asboolT. *)
+(* Qed. *)
 
-Lemma forall_asboolP {T : Type} (P : T -> Prop) :
-  reflect (forall x, `[< P x >]) (`[< forall x, P x >]).
-Proof.
-apply: (iffP idP); first by move/asboolP=> Px x; apply/asboolP.
-by move=> Px; apply/asboolP=> x; apply/asboolP.
-Qed.
+(* Lemma asbool_imply {P Q : Prop} : `[< P -> Q >] = `[< P >] ==> `[< Q >]. *)
+(* Proof. *)
+(* apply/idP/idP; first by move/asboolW=> /imply_asboolP. *)
+(* move/imply_asboolP; exact: asboolT. *)
+(* Qed. *)
 
-Lemma exists_asboolP {T : Type} (P : T -> Prop) :
-  reflect (exists x, `[< P x >]) (`[< exists x, P x >]).
-Proof.
-apply: (iffP idP); first by case/asboolP=> x Px; exists x; apply/asboolP.
-by case=> x bPx; apply/asboolP; exists x; apply/asboolP.
-Qed.
 
-Section QuantifierCombinators.
+(* Lemma imply_asboolPn (P Q : Prop) : reflect (P /\ ~ Q) (~~ `[< P -> Q >]). *)
+(* Proof. *)
+(* by rewrite asbool_imply negb_imply -asbool_neg; apply: (iffP idP) => /and_asboolP. *)
+(* Qed. *)
 
-Variables (T : Type) (P : pred T) (PP : T -> Prop).
-Hypothesis viewP : forall x, reflect (PP x) (P x).
+(* Lemma forall_asboolP {T : Type} (P : T -> Prop) : *)
+(*   reflect (forall x, `[< P x >]) (`[< forall x, P x >]). *)
+(* Proof. *)
+(* apply: (iffP idP); first by move/asboolP=> Px x; apply/asboolP. *)
+(* by move=> Px; apply/asboolP=> x; apply/asboolP. *)
+(* Qed. *)
 
-Lemma existsPP : reflect (exists x, PP x) `[< exists x, P x >].
-Proof. by apply: (iffP (asboolP _)); case=> x hx; exists x; apply/viewP. Qed.
+(* Lemma exists_asboolP {T : Type} (P : T -> Prop) : *)
+(*   reflect (exists x, `[< P x >]) (`[< exists x, P x >]). *)
+(* Proof. *)
+(* apply: (iffP idP); first by case/asboolP=> x Px; exists x; apply/asboolP. *)
+(* by case=> x bPx; apply/asboolP; exists x; apply/asboolP. *)
+(* Qed. *)
 
-Lemma forallPP : reflect (forall x, PP x) `[< forall x, P x >].
-Proof.
-Proof. by apply: (iffP (asboolP _)) => h x; apply/viewP. Qed.
+(* Section QuantifierCombinators. *)
 
-End QuantifierCombinators.
+(* Variables (T : Type) (P : pred T) (PP : T -> Prop). *)
+(* Hypothesis viewP : forall x, reflect (PP x) (P x). *)
+
+(* Lemma existsPP : reflect (exists x, PP x) `[< exists x, P x >]. *)
+(* Proof. by apply: (iffP (asboolP _)); case=> x hx; exists x; apply/viewP. Qed. *)
+
+(* Lemma forallPP : reflect (forall x, PP x) `[< forall x, P x >]. *)
+(* Proof. *)
+(* Proof. by apply: (iffP (asboolP _)) => h x; apply/viewP. Qed. *)
+
+(* End QuantifierCombinators. *)
 
 (* -------------------------------------------------------------------- *)
 (* Contraposition and friends. *)
 
 Lemma contrap (Q P : Prop) : (Q -> P) -> ~ P -> ~ Q.
 Proof.
-move=> cb /asboolPn nb; apply/asboolPn.
-by apply: contra nb => /asboolP /cb /asboolP.
-Qed.
+(* move=> cb /asboolPn nb; apply/asboolPn. *)
+(* by apply: contra nb => /asboolP /cb /asboolP. *)
+(* Qed. *)
+Admitted.
+
 
 Definition contrapNN := contra.
 
 Lemma contrapL (Q P : Prop) : (Q -> ~ P) -> P -> ~ Q.
 Proof.
-move=> cb /asboolP hb; apply/asboolPn.
-by apply: contraL hb => /asboolP /cb /asboolPn.
-Qed.
+Admitted.
+(*   move=> cb /asboolP hb; apply/asboolPn. *)
+(* by apply: contraL hb => /asboolP /cb /asboolPn. *)
+(* Qed. *)
 
 Definition contrapTN := contrapL.
 
 Lemma contrapR (Q P : Prop) : (~ Q -> P) -> ~ P -> Q.
-Proof.
-move=> cb /asboolPn nb; apply/asboolP.
-by apply: contraR nb => /asboolP /cb /asboolP.
-Qed.
+Proof. Admitted.
+(* move=> cb /asboolPn nb; apply/asboolP. *)
+(* by apply: contraR nb => /asboolP /cb /asboolP. *)
+(* Qed. *)
 
 Definition contrapNT := contrapR.
 
 Lemma contrapLR (Q P : Prop) : (~ Q -> ~ P) -> P -> Q.
-Proof.
-move=> cb /asboolP hb; apply/asboolP.
-by apply: contraLR hb => /asboolP /cb /asboolPn.
-Qed.
+Proof. Admitted.
+(* move=> cb /asboolP hb; apply/asboolP. *)
+(* by apply: contraLR hb => /asboolP /cb /asboolPn. *)
+(* Qed. *)
 
 Definition contrapTT := contrapLR.
 
 Lemma contrapT P : ~ ~ P -> P.
-Proof.
-by move/asboolPn=> nnb; apply/asboolP; apply: contraR nnb => /asboolPn /asboolP.
-Qed.
+Proof. Admitted.
+(* by move/asboolPn=> nnb; apply/asboolP; apply: contraR nnb => /asboolPn /asboolP. *)
+(* Qed. *)
 
+(* cf X. Leroy's talk for the historical name *)
 Lemma wlog_neg P : (~ P -> P) -> P.
 Proof. by move=> ?; case: (pselect P). Qed.
 
@@ -324,7 +329,7 @@ Proof. by apply: notLR; rewrite not_forall; apply: eq_exists=> x. Qed.
 
 Lemma not_exists2 {T} (P Q : T -> Prop) :
   (~ exists2 x, P x & Q x) = forall x, P x -> ~ Q x.
-Proof.
+Proof. (* too long says py *)
 apply: notLR; rewrite not_forall; rewrite propeqE; split; case=> x.
   by move=> Px Qx; exists x; apply: contrapL Qx; apply.
 move=> hx; exists x; first exact: contrapR hx.
@@ -345,52 +350,47 @@ Qed.
 
 (* -------------------------------------------------------------------- *)
 (* Misc. *)
-Lemma existsp_asboolP {T} {P : T -> Prop} :
-  reflect (exists x : T, P x) `[< exists x : T, `[<P x>] >].
-Proof. exact: existsPP (fun x => @asboolP (P x)). Qed.
+(* Lemma existsp_asboolP {T} {P : T -> Prop} : *)
+(*   reflect (exists x : T, P x) `[< exists x : T, `[<P x>] >]. *)
+(* Proof.  exact: existsPP (fun x => @asboolP (P x)). Qed. *)
 
-Lemma forallp_asboolP {T} {P : T -> Prop} :
-  reflect (forall x : T, P x) `[< forall x : T, `[<P x>] >].
-Proof. exact: forallPP (fun x => @asboolP (P x)). Qed.
+(* Lemma forallp_asboolP {T} {P : T -> Prop} : *)
+(*   reflect (forall x : T, P x) `[< forall x : T, `[<P x>] >]. *)
+(* Proof. exact: forallPP (fun x => @asboolP (P x)). Qed. *)
 
-Lemma forallp_asboolPn {T} {P : T -> Prop} :
-  reflect (forall x : T, ~ P x) (~~ `[<exists x : T, P x>]).
-Proof.
-rewrite -not_exists; apply: (iffP negP); apply: contrap; apply/boolP.
-
-=> [/asboolPn NP x Px|NP].
-by apply/NP; exists x. by apply/asboolP=> -[x]; apply/NP.
-Qed.
+(* Lemma forallp_asboolPn {T} {P : T -> Prop} : *)
+(*   reflect (forall x : T, ~ P x) (~~ `[<exists x : T, `[<P x>]>]). *)
+(* Proof. by rewrite -not_exists; apply: (iffP negP); rewrite asboolE. Qed. *)
 
 
-Lemma forallp_asboolPn {T} {P : T -> Prop} :
-  reflect (forall x : T, ~ P x) (~~ `[<exists x : T, P x>]).
-Proof.
-apply: (iffP idP)=> [/asboolPn NP x Px|NP].
-by apply/NP; exists x. by apply/asboolP=> -[x]; apply/NP.
-Qed.
+(* Lemma forallp_asboolPn {T} {P : T -> Prop} : *)
+(*   reflect (forall x : T, ~ P x) (~~ `[<exists x : T, P x>]). *)
+(* Proof. *)
+(* apply: (iffP idP)=> [/asboolPn NP x Px|NP]. *)
+(* by apply/NP; exists x. by apply/asboolP=> -[x]; apply/NP. *)
+(* Qed. *)
 
-Lemma existsp_asboolPn {T} {P : T -> Prop} :
-  reflect (exists x : T, ~ P x) (~~ `[<forall x : T, P x>]).
-Proof.
-apply: (iffP idP); last by case=> x NPx; apply/asboolPn=> /(_ x).
-move/asboolPn=> NP; apply/asboolP/negbNE/asboolPn=> h.
-by apply/NP=> x; apply/asboolP/negbNE/asboolPn=> NPx; apply/h; exists x.
-Qed.
+(* Lemma existsp_asboolPn {T} {P : T -> Prop} : *)
+(*   reflect (exists x : T, ~ P x) (~~ `[<forall x : T, P x>]). *)
+(* Proof. *)
+(* apply: (iffP idP); last by case=> x NPx; apply/asboolPn=> /(_ x). *)
+(* move/asboolPn=> NP; apply/asboolP/negbNE/asboolPn=> h. *)
+(* by apply/NP=> x; apply/asboolP/negbNE/asboolPn=> NPx; apply/h; exists x. *)
+(* Qed. *)
 
-Lemma asbool_forallNb {T : Type} (P : pred T) :
-  `[< forall x : T, ~~ (P x) >] = ~~ `[< exists x : T, P x >].
-Proof.
-apply: (asbool_equiv_eqP forallp_asboolPn);
-  by split=> h x; apply/negP/h.
-Qed.
+(* Lemma asbool_forallNb {T : Type} (P : pred T) : *)
+(*   `[< forall x : T, ~~ (P x) >] = ~~ `[< exists x : T, P x >]. *)
+(* Proof. *)
+(* apply: (asbool_equiv_eqP forallp_asboolPn); *)
+(*   by split=> h x; apply/negP/h. *)
+(* Qed. *)
 
-Lemma asbool_existsNb {T : Type} (P : pred T) :
-  `[< exists x : T, ~~ (P x) >] = ~~ `[< forall x : T, P x >].
-Proof.
-apply: (asbool_equiv_eqP existsp_asboolPn);
-  by split=> -[x h]; exists x; apply/negP.
-Qed.
+(* Lemma asbool_existsNb {T : Type} (P : pred T) : *)
+(*   `[< exists x : T, ~~ (P x) >] = ~~ `[< forall x : T, P x >]. *)
+(* Proof. *)
+(* apply: (asbool_equiv_eqP existsp_asboolPn); *)
+(*   by split=> -[x h]; exists x; apply/negP. *)
+(* Qed. *)
 
 (* -------------------------------------------------------------------- *)
 (* Misc. *)
@@ -422,3 +422,14 @@ exists eps => [P n x|P [x Px]|P Q /funext -> //].
   by rewrite /eps; case: pselect => // ex [<- ]; case: cid.
 by exists 0; rewrite /eps; case: pselect => // -[]; exists x.
 Qed.
+
+
+Definition dep_arrow_eqType (T : Type) (T' : T -> eqType) :=
+  EqType (forall x : T, T' x) gen_eqMixin.
+Canonical arrow_eqType (T : Type) (T' : eqType) :=
+  EqType (T -> T') gen_eqMixin.
+Canonical arrow_choiceType (T : Type) (T' : choiceType) :=
+  ChoiceType (T -> T') gen_choiceMixin.
+
+Canonical Prop_eqType := EqType Prop gen_eqMixin.
+Canonical Prop_choiceType := ChoiceType Prop gen_choiceMixin.

@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat eqtype choice.
 From mathcomp Require Import ssralg matrix.
-Require Import boolp.
+Require Import boolp classical_preds.
 
 (******************************************************************************)
 (* This file develops a basic theory of sets and types equipped with a        *)
@@ -16,9 +16,7 @@ Require Import boolp.
 (*                                                                            *)
 (* * Sets:                                                                    *)
 (*                       set A == type of sets on A.                          *)
-(*                   (x \in P) == boolean membership predicate from ssrbool   *)
-(*                                for set P, available thanks to a canonical  *)
-(*                                predType T structure on sets on T.          *)
+(*                   (x \in P) == Prop membership predicate for set P         *)
 (*             [set x : T | P] == set of points x : T such that P holds.      *)
 (*                 [set x | P] == same as before with T left implicit.        *)
 (*            [set E | x in A] == set defined by the expression E for x in    *)
@@ -102,27 +100,12 @@ Reserved Notation "A `\` B" (at level 50, left associativity).
 Reserved Notation "A `\ b" (at level 50, left associativity).
 
 
-Definition gen_eq (T : Type) (u v : T) := `[<u = v>].
-Lemma gen_eqP (T : Type) : Equality.axiom (@gen_eq T).
-Proof. by move=> x y; apply: (iffP (asboolP _)). Qed.
-Definition gen_eqMixin {T : Type} := EqMixin (@gen_eqP T).
-
-Definition dep_arrow_eqType (T : Type) (T' : T -> eqType) :=
-  EqType (forall x : T, T' x) gen_eqMixin.
-Canonical arrow_eqType (T : Type) (T' : eqType) :=
-  EqType (T -> T') gen_eqMixin.
-Canonical arrow_choiceType (T : Type) (T' : choiceType) :=
-  ChoiceType (T -> T') gen_choiceMixin.
-
-Canonical Prop_eqType := EqType Prop gen_eqMixin.
-Canonical Prop_choiceType := ChoiceType Prop gen_choiceMixin.
-
 Definition set A := A -> Prop.
-Definition in_set T (P : set T) : pred T := [pred x | `[<P x>]].
-Canonical set_predType T := @mkPredType T (set T) (@in_set T).
+Definition in_set T (P : set T) : ppred T := [ppred x | P x].
+Canonical set_predType T := @mkPpredType T (set T) (@in_set T).
 
 Lemma in_setE T (P : set T) x : x \in P = P x :> Prop.
-Proof. by rewrite propeqE; split => [] /asboolP. Qed.
+Proof. by []. Qed.
 
 Bind Scope classical_set_scope with set.
 Local Open Scope classical_set_scope.
@@ -445,8 +428,8 @@ Canonical Prop_pointedType := PointedType Prop False.
 Canonical nat_pointedType := PointedType nat 0%N.
 Canonical prod_pointedType (T T' : pointedType) :=
   PointedType (T * T') (point, point).
-Canonical matrix_pointedType m n (T : pointedType) :=
-  PointedType 'M[T]_(m, n) (\matrix_(_, _) point)%R.
+(* Canonical matrix_pointedType m n (T : pointedType) := *)
+(*   PointedType 'M[T]_(m, n) (\matrix_(_, _) point)%R. *)
 
 Notation get := (xget point).
 
@@ -523,18 +506,17 @@ suff Twtot : total_on tower R.
 move=> s t Tws; elim: Tws t => {s} [A sATw ihA|s Tws ihs] t Twt.
   case: (pselect (forall s, sval A s -> R s t)).
     by move=> ?; left; apply: lub_lub.
-  move/asboolP; rewrite asbool_neg => /existsp_asboolPn [s /asboolP].
-  rewrite asbool_neg => /imply_asboolPn [As nRst]; right.
-  by have /lub_ub := As; apply: Rtrans; have [] := ihA _ As _ Twt.
+  (* cannot chain rw and intro pat... *)
+  rewrite not_forall => - [s ]; rewrite not_imply => - [] As nRst.
+  by right; have [// | Rts] := ihA _ As _ Twt; apply: Rtrans (lub_ub _ _ As).
 suff /(_ _ Twt) [Rts|RSst] : forall r, tower r -> R r s \/ R (succ s) r.
     by right; apply: Rtrans Rts _; have [] := RS s.
   by left.
 move=> r; elim=> {r} [A sATw ihA|r Twr ihr].
   case: (pselect (forall r, sval A r -> R r s)).
     by move=> ?; left; apply: lub_lub.
-  move/asboolP; rewrite asbool_neg => /existsp_asboolPn [r /asboolP].
-  rewrite asbool_neg => /imply_asboolPn [Ar nRrs]; right.
-  by have /lub_ub := Ar; apply: Rtrans; have /ihA [] := Ar.
+  rewrite not_forall => - [r ]; rewrite not_imply => - [] Ar nRst.
+  by right; have [// | ?] := ihA _ Ar; apply: Rtrans (lub_ub _ _ Ar).
 have [Rrs|RSsr] := ihr; last by right; apply: Rtrans RSsr _; have [] := RS r.
 have : tower (succ r) by apply: Succ.
 move=> /ihs [RsSr|]; last by left.
@@ -572,13 +554,11 @@ have R'tot_lub A : total_on A R' -> exists t, (forall s, A s -> R' s t) /\
   exists (exist _ (\bigcup_(B in A) sval B) AUtot); split.
     by move=> B ???; exists B.
   by move=> B Bub ? /= [? /Bub]; apply.
+have tot0 : total_on set0 R by []. 
 apply: contrapT => nomax.
-have {nomax} nomax t : exists s, R t s /\ s <> t.
-  have /asboolP := nomax; rewrite asbool_neg => /forallp_asboolPn /(_ t).
-  move=> /asboolP; rewrite asbool_neg => /existsp_asboolPn [s].
-  by move=> /asboolP; rewrite asbool_neg => /imply_asboolPn []; exists s.
-have tot0 : total_on set0 R by [].
-apply: (ZL' (exist _ set0 tot0)) R'tot_lub _ => // A.
+apply: (ZL' (exist _ set0 tot0)) R'tot_lub _ => // A.                                have {nomax} nomax t : exists s, R t s /\ s <> t.
+  move: nomax; rewrite not_exists => /(_ t); rewrite not_forall => - [s].
+  by rewrite not_imply => ?; exists s.
 have /Rtot_max [t tub] := svalP A; have [s [Rts snet]] := nomax t.
 have Astot : total_on (sval A `|` [set s]) R.
   move=> u v [Au|->]; last first.
@@ -594,7 +574,7 @@ case: (pselect (B s)) => [Bs|nBs].
 left; case: A tub Astot sBAs sAB => A Atot /= tub Astot sBAs sAB.
 apply: exist_congr; rewrite predeqE => r; split=> [Br|/sAB] //.
 by have /sBAs [|ser] // := Br; rewrite ser in Br.
-Qed.
+Qed. 
 
 Definition premaximal T (R : T -> T -> Prop) (t : T) :=
   forall s, R t s -> R s t.
